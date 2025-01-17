@@ -9,7 +9,7 @@ import { addTag } from '@/utils/tagsUtilities';
 export default function NewTag() {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
-    const [color, setColor] = useState('#ffffff'); // Default color
+    const [color, setColor] = useState('#ffffff');
     const router = useRouter();
     const [isSaving, setIsSaving] = useState(false);
 
