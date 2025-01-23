@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
-import { fetchNewsList } from '@/utils/newsUtilities';
+import { handleFetchNewsList } from '@/utils/newsUtilities';
 
 type NewsProp = {
     id: number;
@@ -43,13 +43,21 @@ export default function News() {
         totalPages: 1
     });
     const [selectedStatus, setSelectedStatus] = useState('All');
+    const [order, setOrder] = useState('ASC');
     const statuses = ['All', 'Draft', 'Published', 'Approved', 'Rejected', 'Archived'];
     const [toastList, setToastList] = useState<string[]>([]);
     const router = useRouter();
 
     useEffect(() => {
-        fetchNewsList(currentPage, limitPage, selectedStatus, setNewsDatas, setMetaDatas, router);
-    }, [currentPage, limitPage, selectedStatus]);
+        const fetchNewsList = async () => {
+            const response = await handleFetchNewsList(currentPage, limitPage, selectedStatus, order);
+
+            if (response.status === 200) {
+                setMetaDatas(response.meta);
+                setNewsDatas(response.data);
+            }
+        }
+    }, [currentPage, limitPage, selectedStatus, order]);
 
     const handlePageChange = (page: number) => {
         setCurrentPage(page);

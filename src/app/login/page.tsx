@@ -3,21 +3,29 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { handleLogin } from '@/utils/userUtilities';
+import { handleAdminLogin } from '@/utils/userUtilities';
 
 export default function Login() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
+    const [error, setError] = useState<string>('');
+    const [success, setSuccess] = useState<string>('');
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(null);
-        setSuccess(null);
+        setError('');
+        setSuccess('');
 
-        await handleLogin(email, password, setSuccess, setError, router);
+        const response = await handleAdminLogin(email, password);
+
+        if (response.status === 200) {
+            setSuccess(response.message || 'Login Success');
+            localStorage.setItem('token', response.token || '');
+            router.push('/news');
+        } else {
+            setError(response.message || 'An unexpected error occurred.');
+        }
     };
 
     return (

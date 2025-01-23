@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export type NewsProp = {
     id: number;
@@ -23,22 +24,24 @@ export type NewsMetaProp = {
     totalPages: number;
 };
 
-export async function AddNews(
-    title: string,
-    subTitle: string,
-    category: number,
-    content: string,
-    router: any,
-) {
+type Response = {
+    status?: number;
+    message?: string;
+    meta?: NewsMetaProp;
+    data?: NewsProp;
+    slug?: string;
+    error?: string;
+};
+
+export async function handleFetchNewsList(
+    currentPage: number,
+    limitPage: number,
+    selectedStatus: string,
+    order: string,
+): Promise<Response> {
     try {
-        const response = await axios.post(
-            `http://localhost:8080/api/news/add`,
-            {
-                title,
-                sub_title: subTitle,
-                category_id: category,
-                content: content,
-            },
+        const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/news?page=${currentPage}&limit=${limitPage}&status=${selectedStatus.toLowerCase()}&order=${order}`,
             {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -47,33 +50,133 @@ export async function AddNews(
         );
 
         if (response.status === 200) {
-            console.log('News saved successfully:', response.data.message);
-            setTimeout(() => {
-                router.push('/news');
-            }, 1000);
+            return {
+                status: response.status,
+                message: response.data.message,
+                meta: response.data.meta,
+                data: response.data.data
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
         }
-    } catch (error: any) {
-        console.error('Error saving news:', error.response?.data || error.message);
+    } catch (err: any) {
+        console.error("Error fetching news:", err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
+    }
+};
+
+export async function handleFetchNewsBySlug(slug: string): Promise<Response> {
+    try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/news/article/${slug}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        if (response.status === 200) {
+            return {
+                status: response.status,
+                message: response.data.message,
+                data: response.data.news
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
+        }
+    } catch (err: any) {
+        console.error('Error fetching news:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
+    }
+};
+
+export async function handleFetchNewsBySearch(
+    searchTerm: string,
+    currentPage: number,
+    limitPage: number,
+    order: string,
+): Promise<Response> {
+    try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/news/search?page=${currentPage}&limit=${limitPage}&search=${searchTerm}&order=${order}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        if (response.status === 200) {
+            return {
+                status: response.status,
+                message: response.data.message,
+                meta: response.data.meta,
+                data: response.data.data
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
+        }
+    } catch (err: any) {
+        console.error('Error fetching news:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
+    }
+};
+
+export async function handleAddNews(
+    title: string,
+    subTitle: string,
+    content: string,
+    category: number,
+    tags: number[],
+): Promise<Response> {
+    try {
+        const response = await axios.post(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/news/add`,
+            {
+                title,
+                sub_title: subTitle,
+                content: content,
+                category_id: category,
+                tags_id: tags
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${localStorage.getItem('token')}`,
+                },
+            }
+        );
+
+        return {
+            status: response.status,
+            message: response.data.message
+        };
+    } catch (err: any) {
+        console.error('Error saving news:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
 }
 
-export async function UpdateNews(
+export async function handleUpdateNews(
     newsId: number,
     title: string,
     subTitle: string,
+    content: string,
     category: number,
-    editor: any,
-    router: ReturnType<typeof useRouter>
-) {
+    tags: number[],
+): Promise<Response> {
     try {
-        const content = editor.getHTML();
         const response = await axios.put(
-            `http://localhost:8080/api/news/edit/${newsId}`,
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/news/edit/${newsId}`,
             {
                 title,
                 sub_title: subTitle,
                 category_id: category,
                 content,
+                tags_id: tags
             },
             {
                 headers: {
@@ -83,52 +186,33 @@ export async function UpdateNews(
         );
 
         if (response.status === 200) {
-            console.log('News saved successfully:', response.data.message);
-            setTimeout(() => {
-                router.push(`/news/${response.data.slug}`);
-            }, 300);
+            return {
+                status: response.status,
+                message: response.data.message,
+                slug: response.data.slug
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
         }
-    } catch (error: any) {
-        console.error('Error saving news:', error.response?.data || error.message);
+    } catch (err: any) {
+        console.error('Error saving news:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
 }
 
-export async function fetchNews(
-    slug: string | undefined,
-) {
-    if (!slug) {
-        console.error("Slug is required to fetch news.");
-        return;
-    }
-
+export async function handleUpdateNewsStatus(
+    newsId: number,
+    status: string,
+): Promise<Response> {
     try {
-        const response = await axios.get(`http://localhost:8080/api/news/article/${slug}`, {
-            headers: {
-                Authorization: `Bearer ${localStorage.getItem('token')}`,
+        const response = await axios.put(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/news/update-status/${newsId}`,
+            {
+                status
             },
-        });
-
-        if (response.status === 200 && response.data?.news) {
-            return response.data.news;
-        } else {
-            console.error("News not found in response.");
-        }
-    } catch (error: any) {
-        console.error('Error fetching news:', error.response?.data || error.message);
-    }
-};
-
-export async function fetchNewsList(
-    currentPage: number,
-    limitPage: number,
-    selectedStatus: string,
-    setNewsDatas: (data: NewsProp[]) => void,
-    setMetaDatas: (data: NewsMetaProp) => void,
-    router: ReturnType<typeof useRouter>
-): Promise<void> {
-    try {
-        const response = await axios.get(
-            `http://localhost:8080/api/news?page=${currentPage}&limit=${limitPage}&status=${selectedStatus.toLowerCase()}&order=DESC`,
             {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -136,58 +220,32 @@ export async function fetchNewsList(
             }
         );
 
-        if (response.status === 200) {
-            setNewsDatas(response.data.data);
-            setMetaDatas(response.data.meta);
-        } else if (response.status === 401) {
-            setNewsDatas([]);
-            setMetaDatas({
-                currentPage: 1,
-                itemsPerPage: 0,
-                totalItems: 0,
-                totalPages: 0,
-            });
-            setTimeout(() => {
-                router.push('/login');
-            }, 1000);
-        } else if (response.status === 404) {
-            setNewsDatas([]);
-            setMetaDatas({
-                currentPage: 1,
-                itemsPerPage: 0,
-                totalItems: 0,
-                totalPages: 0,
-            });
+        return {
+            status: response.status,
+            message: response.data.message,
         }
-    } catch (error: any) {
-        console.error("Error fetching news:", error.response?.data || error.message);
-        setNewsDatas([]);
-        setMetaDatas({
-            currentPage: 1,
-            itemsPerPage: 0,
-            totalItems: 0,
-            totalPages: 0,
-        });
+    } catch (err: any) {
+        console.error('Error setting news status:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
-};
+}
 
-export async function deleteNews(
+export async function handleDeleteNews(
     newsId: number,
-    setToast: React.Dispatch<React.SetStateAction<string[]>>,
-    reFetchData: () => void
-) {
+): Promise<Response> {
     try {
-        const response = await axios.delete(`http://localhost:8080/api/news/delete/${newsId}`, {
+        const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/news/delete/${newsId}`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
         });
 
-        if (response.status === 200) {
-            setToast((prevToast) => [...prevToast, response.data.message]);
-            reFetchData();
+        return {
+            status: response.status,
+            message: response.data.message,
         }
-    } catch (error: any) {
-        console.error('Error deleting news:', error.response?.data || error.message);
+    } catch (err: any) {
+        console.error('Error deleting news:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
 }
