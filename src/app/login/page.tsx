@@ -1,110 +1,113 @@
 "use client";
 
-import { useState } from 'react';
-import axios from 'axios';
-import { useRouter } from 'next/navigation';
 import { handleAdminLogin } from '@/utils/userUtilities';
+import { useRouter } from 'next/navigation';
+import { useContext, useEffect, useState } from 'react';
+import { Toast } from '@/components/toastList';
+import { RoleContext, ThemeContext } from '@/provider/Provider';
+import CompanyLogo from '@/components/companyLogo';
+import Metadata from '@/utils/metadata';
 
 export default function Login() {
+    const roleContext = useContext(RoleContext);
+    if (!roleContext) return null;
+    const { FetchUserRole } = roleContext;
+    const context = useContext(ThemeContext);
+    if (!context) {
+        throw new Error("ThemeToggle must be used within a ThemeProvider");
+    }
+    const [isDark, setIsDark] = context;
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [error, setError] = useState<string>('');
-    const [success, setSuccess] = useState<string>('');
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError('');
-        setSuccess('');
 
         const response = await handleAdminLogin(email, password);
 
         if (response.status === 200) {
-            setSuccess(response.message || 'Login Success');
+            const message = response.message || 'Login Success';
+            if (message) {
+                Toast('success', message);
+            }
             localStorage.setItem('token', response.token || '');
-            router.push('/news');
+            await FetchUserRole();
+            setTimeout(() => {
+                router.push('/news');
+            }, 1000)
         } else {
-            setError(response.message || 'An unexpected error occurred.');
+            const message = response.message || 'An unexpected error occurred.';
+            if (message) {
+                Toast('error', message);
+            }
         }
     };
 
     return (
-        <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-                <img
-                    alt="Your Company"
-                    src="/black-logo.png"
-                    className="mx-auto h-16 w-auto"
-                />
-                <h2 className="mt-5 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-                    Login to your account
-                </h2>
-            </div>
-
-            <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                <form onSubmit={handleSubmit} method="POST" className="space-y-6">
-                    <div>
-                        <label htmlFor="email" className="block text-sm/6 font-medium text-gray-900">
-                            Email address
-                        </label>
-                        <div className="mt-2">
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                required
-                                autoComplete="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                            />
-                        </div>
+        <>
+            <Metadata title='Login ' description='| Neswara' />
+            <div className='w-screen h-screen flex items-center justify-center'>
+                <div className="max-w-[500px] mx-auto bg-card dark:bg-darkCard rounded-2xl shadow-lg flex flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+                    <div className="sm:mx-auto sm:w-full sm:max-w-sm flex flex-col items-center">
+                        <CompanyLogo size={55} />
+                        <h2 className="mt-2 text-center text-2xl/9 font-bold tracking-tight">
+                            Login to your account
+                        </h2>
                     </div>
 
-                    <div>
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="password" className="block text-sm/6 font-medium text-gray-900">
-                                Password
-                            </label>
-                            <div className="text-sm">
-                                <a href="/forgot-password" className="font-semibold text-indigo-600 hover:text-indigo-500">
-                                    Forgot password?
-                                </a>
+                    <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+                        <form onSubmit={handleSubmit} method="POST" className="space-y-6">
+                            <div>
+                                <label htmlFor="email" className="block text-sm/6 font-medium">
+                                    Email address
+                                </label>
+                                <div className="mt-2">
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        required
+                                        autoComplete="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="block w-full rounded-md px-3 py-1.5 text-base bg-card dark:bg-darkCard text-text dark:text-darkText outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-primary sm:text-sm/6"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div className="mt-2">
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                autoComplete="current-password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                            />
-                        </div>
-                    </div>
 
-                    <div className='flex flex-col items-center gap-4'>
-                        {error && <p className="text-red-500 text-sm">{error}</p>}
-                        {success && <p className="text-green-500 text-sm">{success}</p>}
-                        <button
-                            type="submit"
-                            className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                        >
-                            Login
-                        </button>
-                    </div>
-                </form>
+                            <div>
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="password" className="block text-sm/6 font-medium">
+                                        Password
+                                    </label>
+                                </div>
+                                <div className="mt-2">
+                                    <input
+                                        id="password"
+                                        name="password"
+                                        type="password"
+                                        required
+                                        autoComplete="current-password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="block w-full rounded-md px-3 py-1.5 text-base bg-card dark:bg-darkCard text-text dark:text-darkText outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-primary sm:text-sm/6"
+                                    />
+                                </div>
+                            </div>
 
-                <p className="mt-10 text-center text-sm/6 text-gray-500">
-                    Doesn't have an account yet?{' '}
-                    <a href="/sign-up" className="font-semibold text-indigo-600 hover:text-indigo-500">
-                        Sign-Up
-                    </a>
-                </p>
+                            <div className='flex flex-col items-center gap-4'>
+                                <button
+                                    type="submit"
+                                    className="flex w-full justify-center rounded-md bg-green-500 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-primary/80 button-ring"
+                                >
+                                    Login
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 }

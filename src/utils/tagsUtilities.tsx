@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 
-type TagProp = {
+export type Tag = {
     id: number;
     name: string;
     slug: string;
@@ -11,72 +11,150 @@ type TagProp = {
     updated_at: string;
 };
 
-type TagMetaProp = {
+export type Meta = {
     currentPage: number;
     itemsPerPage: number;
     totalItems: number;
     totalPages: number;
 };
 
-export async function fetchTags(
+type Response = {
+    status?: number;
+    message?: string;
+    meta?: Meta;
+    tag?: Tag;
+    tags?: Tag[];
+    total?: number;
+    slug?: string;
+    error?: string;
+};
+
+export async function handleFetchTagList(
     currentPage: number,
     limitPage: number,
-    setTagDatas: React.Dispatch<React.SetStateAction<TagProp[]>>,
-    setMetaDatas: React.Dispatch<React.SetStateAction<TagMetaProp>>
-) {
+    order: string,
+): Promise<Response> {
     try {
-        const response = await axios.get(
-            `http://localhost:8080/api/tags?page=${currentPage}&limit=${limitPage}&order=DESC`,
-            {
-                headers: {
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-            }
-        );
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/tags?page=${currentPage}&limit=${limitPage}&order=${order}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
 
         if (response.status === 200) {
-            setTagDatas(response.data.tags);
-            setMetaDatas(response.data.meta);
-        } else if (response.status === 401 || response.status === 404) {
-            setTagDatas([]);
-            setMetaDatas({ currentPage: 1, itemsPerPage: 0, totalItems: 0, totalPages: 0 });
+            return {
+                status: response.status,
+                message: response.data.message,
+                meta: response.data.meta,
+                tags: response.data.tags
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
         }
-    } catch (error: any) {
-        console.error('Error fetching tags:', error.response?.data || error.message);
-        setTagDatas([]);
-        setMetaDatas({ currentPage: 1, itemsPerPage: 0, totalItems: 0, totalPages: 0 });
+    } catch (err: any) {
+        console.error('Error fetching tag list:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
-}
+};
 
-export async function fetchTag(
-    slug: string,
-) {
+export async function handleFetchTagBySlug(slug: string): Promise<Response> {
     try {
-        const response = await axios.get(`http://localhost:8080/api/tags/${slug}`, {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/tags/view/${slug}`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
         });
 
         if (response.status === 200) {
-            return response.data.tag;
+            return {
+                status: response.status,
+                message: response.data.message,
+                tag: response.data.category
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
         }
-    } catch (error) {
-        console.error('Error fetching tag:', error);
+    } catch (err: any) {
+        console.error('Error fetching tag:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
-}
+};
 
-export async function updateTag(
-    tagId: number,
+export async function handleFetchTagBySearch(
+    searchTerm: string,
+    currentPage: number,
+    limitPage: number,
+    order: string,
+): Promise<Response> {
+    try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/tags/search?page=${currentPage}&limit=${limitPage}&search=${searchTerm}&order=${order}`, {
+            headers: {
+                Authorization: `Bearer ${localStorage.getItem('token')}`,
+            },
+            validateStatus: () => true,
+        });
+
+        if (response.status === 200) {
+            return {
+                status: response.status,
+                message: response.data.message,
+                meta: response.data.meta,
+                tags: response.data.data
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
+        }
+    } catch (err: any) {
+        console.error('Error fetching tags:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
+    }
+};
+
+export async function handleAddTag(
     name: string,
     description: string,
     color: string,
-    router: ReturnType<typeof useRouter>
-): Promise<void> {
+): Promise<Response> {
+    try {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/tags/add`, {
+            name, description, color
+        }, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            },
+        });
+
+        return {
+            status: response.status,
+            message: response.data.message
+        };
+    } catch (err: any) {
+        console.error('Error creating new tag:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
+    }
+};
+
+export async function handleUpdateTag(
+    tagId: number,
+    name: string,
+    color: string,
+    description: string,
+): Promise<Response> {
     try {
         const response = await axios.put(
-            `http://localhost:8080/api/tags/edit/${tagId}`,
-            { name, description, color },
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/tags/edit/${tagId}`,
+            {
+                name, color, description
+            },
             {
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -85,65 +163,37 @@ export async function updateTag(
         );
 
         if (response.status === 200) {
-            console.log('Tag updated successfully:', response.data.message);
-            setTimeout(() => {
-                router.push('/tags');
-            }, 300);
+            return {
+                status: response.status,
+                message: response.data.message,
+                slug: response.data.slug
+            };
+        } else {
+            return {
+                status: response.status,
+                message: response.data.message
+            };
         }
-    } catch (error: any) {
-        console.error('Error updating tag:', error.response?.data || error.message);
+    } catch (err: any) {
+        console.error('Error updating tag:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
-}
+};
 
-export async function addTag(
-    name: string,
-    description: string,
-    color: string,
-    router: ReturnType<typeof useRouter>
-) {
+export async function handleDeleteTag(tagId: number): Promise<Response> {
     try {
-        const response = await axios.post(
-            `http://localhost:8080/api/tags/add`,
-            {
-                name,
-                description,
-                color,
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-            }
-        );
-
-        if (response.status === 200) {
-            console.log(response.data.message);
-            setTimeout(() => {
-                router.push('/tags');
-            }, 300);
-        }
-    } catch (error: any) {
-        console.error('Error saving tag:', error.response?.data || error.message);
-        return null;
-    }
-}
-
-export async function deleteTag(
-    tagId: number,
-    reFetchData: () => void
-) {
-    try {
-        const response = await axios.delete(`http://localhost:8080/api/tags/delete/${tagId}`, {
+        const response = await axios.delete(`${process.env.NEXT_PUBLIC_API_BASE_URL}/tags/delete/${tagId}`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
         });
 
-        if (response.status === 200) {
-            reFetchData();
+        return {
+            status: response.status,
+            message: response.data.message,
         }
-
-    } catch (error: any) {
-        console.error("Error deleting tag:", error.response?.data || error.message);
+    } catch (err: any) {
+        console.error('Error deleting tag:', err.response?.data || err.message);
+        return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
 }

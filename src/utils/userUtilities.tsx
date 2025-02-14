@@ -1,25 +1,65 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { jwtDecode } from 'jwt-decode';
 dotenv.config();
 
-type User = {
-    id?: number;
-    name?: string;
-    email?: string;
-    username?: string;
-    role_id?: number;
-    no_ktp?: number;
-    photo?: string;
-    phone?: number;
+export type User = {
+    id: number;
+    name: string;
+    email: string;
+    username: string;
+    role_id: number;
+    role: string;
+    no_ktp: number;
+    photo: string;
+    phone: number;
+    last_login: string;
+    active: number;
 };
 
-type Response = {
+export type Meta = {
+    currentPage: number;
+    itemsPerPage: number;
+    totalItems: number;
+    totalPages: number;
+};
+
+export type Response = {
     status?: number;
     message?: string;
     token?: string;
+    meta?: Meta;
     user?: User;
     users?: User[];
     error?: string;
+};
+
+type DecodedToken = {
+    id: number;
+    photo: string;
+    email: string;
+    name: string;
+    role_id: number;
+    iat: number;
+    exp: number;
+};
+
+export const MyAccount = (need: string) => {
+    const token = localStorage.getItem("token") || '';
+    if (!token) return '';
+    const decoded: DecodedToken = jwtDecode<DecodedToken>(token);
+
+    if (need == 'id') {
+        return decoded.id;
+    } else if (need == 'photo') {
+        return decoded.photo;
+    } else if (need == 'email') {
+        return decoded.email;
+    } else if (need == 'name') {
+        return decoded.name;
+    } else if (need == 'role') {
+        return decoded.role_id;
+    }
 };
 
 export async function handleUserSignUp(
@@ -130,15 +170,9 @@ export async function handlePasswordReset(
     }
 };
 
-export async function handleLogout(
-    email: string,
-    token: string,
-    newPassword: string,
-): Promise<Response> {
+export async function handleLogout(): Promise<Response> {
     try {
-        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/password-reset`, {
-            email, token, newPassword
-        }, {
+        const response = await axios.post(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/logout`, {}, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
@@ -249,21 +283,32 @@ export async function handleFetchAdminData(): Promise<Response> {
     }
 };
 
-export async function handleFetchUserList(): Promise<Response> {
+export async function handleFetchUserList(
+    searchTerm: string,
+    currentPage: number,
+    limitPage: number,
+    order: string,
+    selectedStatus: string,
+): Promise<Response> {
     try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/user-list`, {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_BASE_URL}/user/user-list?page=${currentPage}&limit=${limitPage}&search=${searchTerm}&order=${order}&status=${selectedStatus.toLowerCase()}`, {
             headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
             },
         });
 
         if (response.status === 200) {
-            return { status: response.status, message: response.data.message, users: response.data.users };
+            return {
+                status: response.status,
+                message: response.data.message,
+                meta: response.data.meta,
+                users: response.data.users
+            };
         } else {
             return { status: response.status, message: response.data.message };
         }
     } catch (err: any) {
-        console.error("Error fetching admin data:", err.response?.data || err.message);
+        console.error("Error fetching user data:", err.response?.data || err.message);
         return { status: err.response.status || 500, message: err.response.data.message || "An unexpected error occurred." };
     }
 };

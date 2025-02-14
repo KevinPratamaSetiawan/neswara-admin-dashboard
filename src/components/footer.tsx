@@ -10,7 +10,7 @@ export default function Footer() {
 
     return (
         !hide.includes(pathname) &&
-        <footer className="w-full flex items-center justify-center p-5 text-gray-600 text-xs md:text-base">
+        <footer className="w-full flex items-center justify-center p-5 text-secondaryText dark:text-darkSecondaryText text-xs md:text-base mt-auto">
             <p>© {thisYear} Neswara. All rights reserved.</p>
             <AccessCheck />
         </footer>

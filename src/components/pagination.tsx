@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { useState } from 'react';
 
 interface PaginationProps {
     currentPage: number;
@@ -10,42 +11,64 @@ interface PaginationProps {
 }
 
 export default function Pagination({ currentPage, itemsPerPage, totalItems, totalPages, onPageChange }: PaginationProps) {
-    const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+    const [goTo, setGoTo] = useState('');
+
+    const onGoToPage = () => {
+        if (isNaN(parseInt(goTo)) || parseInt(goTo) <= 0 || parseInt(goTo) > totalPages) {
+            setGoTo('');
+            return;
+        }
+
+        onPageChange(parseInt(goTo))
+        setGoTo('');
+    };
+
+    const renderPageNumbers = () => {
+        const pageNumbers = [];
+        for (let i = 1; i <= totalPages; i++) {
+            if (
+                i === 1 ||
+                i === currentPage - 1 ||
+                i === currentPage ||
+                i === currentPage + 1 ||
+                i === totalPages
+            ) {
+                pageNumbers.push(
+                    <a key={i} href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onPageChange(i);
+                        }}
+                        aria-current={i === currentPage ? 'page' : undefined}
+                        className={`relative ${i === 1 || i === currentPage || i === totalPages ? 'inline-flex' : 'hidden sm:inline-flex'} items-center px-4 py-2 text-sm font-semibold ${i === currentPage ? 'bg-primary/80 text-white' : 'text-secondaryText dark:text-darkSecondaryText button-hover button-ring border border-border'} focus:z-20 focus:outline-offset-0`}
+                    >
+                        {i}
+                    </a>
+                );
+            } else if (i === 2 || i === totalPages - 1) {
+                pageNumbers.push(
+                    <input type='text' key={i}
+                        value={goTo}
+                        placeholder='...'
+                        onChange={(e) => setGoTo(e.target.value)}
+                        onBlur={() => onGoToPage()}
+                        aria-label={'Go to page input'}
+                        className={`w-10 relative inline-flex items-center px-1 py-2 placeholder-secondaryText dark:placeholder-darkSecondaryText text-center text-sm font-semibold text-text dark:text-darkText bg-card dark:bg-darkCard button-hover focus:z-20 focus:outline-offset-0  border border-border`}
+                    />
+                );
+            }
+        }
+        return pageNumbers;
+    };
 
     return (
-        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
-            <div className="flex flex-1 justify-between sm:hidden">
-                <a
-                    href="#"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage > 1) {
-                            onPageChange(currentPage - 1);
-                        }
-                    }}
-                    className={`relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}`}
-                >
-                    Previous
-                </a>
-                <a
-                    href="#"
-                    onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage < totalPages) {
-                            onPageChange(currentPage + 1);
-                        }
-                    }}
-                    className={`relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}`}
-                >
-                    Next
-                </a>
-            </div>
-            <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-                <div>
-                    <p className="text-sm text-gray-700">
-                        Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
-                        <span className="font-medium">{totalItems}</span> results
+        <div className="w-full text-secondaryText dark:text-darkSecondaryText flex items-center justify-between border-t border-border dark:border-darkBorder lg:px-4 py-3 sm:px-6">
+            <div className="flex flex-1 items-center justify-center lg:justify-between">
+                <div className='hidden lg:block'>
+                    <p className="text-sm">
+                        Showing <span className="font-medium text-text dark:text-darkText">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                        <span className="font-medium text-text dark:text-darkText">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+                        <span className="font-medium text-text dark:text-darkText">{totalItems}</span> results
                     </p>
                 </div>
                 <div>
@@ -58,25 +81,13 @@ export default function Pagination({ currentPage, itemsPerPage, totalItems, tota
                                     onPageChange(currentPage - 1);
                                 }
                             }}
-                            className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}`}
+                            className={`relative inline-flex items-center rounded-l-md border border-border px-2 py-2 text-secondaryText dark:text-darkSecondaryText button-hover button-ring focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
                             <span className="sr-only">Previous</span>
                             <FontAwesomeIcon icon={faChevronLeft} />
                         </a>
-                        {pageNumbers.map((page) => (
-                            <a
-                                key={page}
-                                href="#"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    onPageChange(page);
-                                }}
-                                aria-current={page === currentPage ? 'page' : undefined}
-                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${page === currentPage ? 'bg-indigo-600 text-white' : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'} focus:z-20 focus:outline-offset-0`}
-                            >
-                                {page}
-                            </a>
-                        ))}
+                        {renderPageNumbers()}
+
                         <a
                             href="#"
                             onClick={(e) => {
@@ -85,7 +96,7 @@ export default function Pagination({ currentPage, itemsPerPage, totalItems, tota
                                     onPageChange(currentPage + 1);
                                 }
                             }}
-                            className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}`}
+                            className={`relative inline-flex items-center rounded-r-md border border-border px-2 py-2 text-secondaryText dark:text-darkSecondaryText button-hover button-ring focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
                             <span className="sr-only">Next</span>
                             <FontAwesomeIcon icon={faChevronRight} />

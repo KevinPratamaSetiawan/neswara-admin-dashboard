@@ -5,3 +5,62 @@
 *::-webkit-scrollbar {
   display: none;
 }
+
+:root {
+  --background: 240, 240, 240;
+  --dark-background: 10, 10, 10;
+  --backgroundHover: 243, 244, 246;
+  --darkBackgroundHover: 31, 41, 55;
+  --text: 17, 24, 39;
+  --dark-text: 244, 244, 245;
+  --secondary-text: 17, 24, 39;
+  --dark-secondary-text: 200, 200, 200;
+  --border: 203, 213, 225;
+  --dark-border: 38, 38, 38;
+  --card: 255, 255, 255;
+  --dark-card: 25, 25, 25;
+
+  --primary: 16, 191, 71;
+  --secondary: 240, 240, 240;
+}
+
+body {
+  background-image: url("/bg-white.jpg");
+  background-repeat: repeat;
+  background-position: center center;
+  background-size: auto;
+}
+
+.dark {
+  body {
+    background-image: url("/bg-black.png");
+    background-repeat: repeat;
+    background-position: center center;
+    background-size: auto;
+  }
+}
+
+.button-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #e5e7eb;
+}
+
+.button-hover:hover {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05),
+    /* shadow-sm */ inset 0 0 0 1px #d1d5db; /* ring-1 ring-inset ring-gray-300 */
+  background-color: rgb(var(--backgroundHover));
+}
+
+.dark .button-hover:hover {
+  background-color: rgb(var(--darkBackgroundHover));
+}
+
+details[open] .fa-caret-right {
+  transform: rotate(90deg);
+  transition: transform 0.5s ease;
+}
+
+details:not([open]) .fa-caret-right {
+  transform: rotate(0);
+  transition: transform 0.5s ease;
+}
